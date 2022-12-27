@@ -41,7 +41,7 @@ internal class GraphHelper
         string url = await GetSiteIdByUrlAsync(endpoint);
        
         if (url == null)
-            return (url, endpoint);
+            return (url, endpoint).ToTuple();
 
         Console.ForegroundColor = ConsoleColor.White;
         endpoint ??= string.Empty;
