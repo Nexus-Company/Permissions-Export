@@ -1,6 +1,7 @@
 ﻿using Microsoft.Graph;
 using Nexus.Permissions.Export.Models;
-using Nexus.Permissions.Export.Models.Enums;
+using System.Linq;
+using System.Threading.Tasks;
 using PermissionType = Nexus.Permissions.Export.Models.Enums.PermissionType;
 
 namespace Nexus.Permissions.Export;
@@ -17,7 +18,7 @@ internal class GraphHelper
     public async Task<Tuple<string, string>> GetSiteAsync()
     {
         bool validEntry = false;
-        string? endpoint = null, site = null;
+        string? endpoint = null;
 
         while (!validEntry)
         {
@@ -37,6 +38,11 @@ internal class GraphHelper
             validEntry = true;
         }
 
+        string url = await GetSiteIdByUrlAsync(endpoint);
+       
+        if (url == null)
+            return (url, endpoint);
+
         Console.ForegroundColor = ConsoleColor.White;
         endpoint ??= string.Empty;
         endpoint = endpoint.Contains(sharepointHost) ? endpoint : endpoint + sharepointHost;
@@ -53,7 +59,7 @@ internal class GraphHelper
         Console.Write("Escolha uma opção: ");
 
         Console.ForegroundColor = ConsoleColor.DarkGray;
-        bool list = Program.GetInt(0, 1) == 1;
+        bool list = GetInt(0, 1) == 1;
         Console.ForegroundColor = ConsoleColor.White;
 
         if (list)
@@ -189,7 +195,7 @@ internal class GraphHelper
         Console.Write($"\nEscolha uma Biblioteca: ");
         Console.ForegroundColor = ConsoleColor.DarkGray;
 
-        int item = Program.GetPageOrItem(out bool? next, drives.NextPageRequest != null, 0, drives.Count);
+        int item = GetPageOrItem(out bool? next, drives.NextPageRequest != null, 0, drives.Count);
         Console.ForegroundColor = ConsoleColor.White;
         if (next ?? false)
             return await GetListAsync(site, nextPage);
@@ -218,14 +224,17 @@ internal class GraphHelper
         Console.Write($"\nEscolha uma Site: ");
         Console.ForegroundColor = ConsoleColor.DarkGray;
 
-        int item = Program.GetPageOrItem(out bool? next, drives.NextPageRequest != null, 0, drives.Count);
+        int item = GetPageOrItem(out bool? next, drives.NextPageRequest != null, 0, drives.Count);
         Console.ForegroundColor = ConsoleColor.White;
         if (next ?? false)
             return await GetSiteAsync(endpoint, nextPage);
 
         return (drives[item].Id, drives[item].WebUrl).ToTuple();
     }
-
+    private async Task<string> GetSiteIdByUrlAsync(string url)
+        => (await _userClient.Sites.Request()
+            .Filter($"webUrl eq '{url}'")
+            .GetAsync()).FirstOrDefault()?.Id ?? string.Empty;
     private static void showSite(string site)
     {
         Console.Clear();
@@ -233,5 +242,48 @@ internal class GraphHelper
         Console.ForegroundColor = ConsoleColor.Green;
         Console.WriteLine($"{site} \n");
         Console.ForegroundColor = ConsoleColor.DarkGray;
+    }
+    private static int GetInt(int min = 0, int max = int.MaxValue)
+    {
+        while (true)
+        {
+            string entry = Console.ReadLine();
+
+            if (string.IsNullOrEmpty(entry)) continue;
+            if (int.TryParse(entry, out int value) && value >= min && value <= max)
+            {
+                return value;
+            }
+
+            Console.WriteLine($"O valor de entrada deve estar entre '{min}' e '{max}'.");
+        }
+    }
+    private static int GetPageOrItem(out bool? next, bool nextPage = false, int min = 0, int max = int.MaxValue)
+    {
+        next = null;
+
+        while (true)
+        {
+            string entry = Console.ReadLine()?.ToLowerInvariant().Trim();
+
+            if (string.IsNullOrEmpty(entry)) continue;
+            if (entry == "n")
+            {
+                next = true;
+                if (!nextPage)
+                {
+                    Console.WriteLine("Não existe próxima página.");
+                    continue;
+                }
+                return -1;
+            }
+
+            if (int.TryParse(entry, out int value) && value >= min && value <= max)
+            {
+                return value;
+            }
+
+            Console.WriteLine($"O valor de entrada deve estar entre '{min}' e '{max}'.");
+        }
     }
 }
