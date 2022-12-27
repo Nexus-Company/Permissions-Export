@@ -2,6 +2,7 @@
 using Nexus.Permissions.Export.Models;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Web;
 using PermissionType = Nexus.Permissions.Export.Models.Enums.PermissionType;
 
 namespace Nexus.Permissions.Export;
@@ -33,17 +34,18 @@ internal class GraphHelper
 
             UriBuilder builder = new(endpoint);
 
-            endpoint = builder.Host.Trim();
+            if (string.IsNullOrEmpty(builder.Path))
+                endpoint = builder.Host.Trim();
 
             validEntry = true;
         }
 
-        string url = await GetSiteIdByUrlAsync(endpoint);
-       
-        if (url == null)
-            return (url, endpoint).ToTuple();
-
         Console.ForegroundColor = ConsoleColor.White;
+        string id = await GetSiteIdByUrlAsync(new Uri(endpoint));
+
+        if (!string.IsNullOrEmpty(id))
+            return (id, endpoint).ToTuple();
+
         endpoint ??= string.Empty;
         endpoint = endpoint.Contains(sharepointHost) ? endpoint : endpoint + sharepointHost;
 
@@ -231,10 +233,24 @@ internal class GraphHelper
 
         return (drives[item].Id, drives[item].WebUrl).ToTuple();
     }
-    private async Task<string> GetSiteIdByUrlAsync(string url)
-        => (await _userClient.Sites.Request()
-            .Filter($"webUrl eq '{url}'")
-            .GetAsync()).FirstOrDefault()?.Id ?? string.Empty;
+    private async Task<string> GetSiteIdByUrlAsync(Uri url)
+    {
+        string id = string.Empty;
+
+        try
+        {
+            id = (await _userClient.Sites
+                .GetByPath(url.LocalPath, url.Host)
+                .Request()
+                .GetAsync()).Id;
+        }
+        catch (Exception)
+        {
+        }
+
+        return id;
+    }
+
     private static void showSite(string site)
     {
         Console.Clear();

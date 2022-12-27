@@ -8,5 +8,6 @@ namespace Nexus.Permissions.Export.Models.Enums;
 public enum Roles
 {
     Owner,
-    Read
+    Read,
+    Write
 }

@@ -1,6 +1,7 @@
 ﻿using Microsoft.Graph;
 using Nexus.Permissions.Export.Base;
 using Nexus.Permissions.Export.Properties;
+using OfficeOpenXml;
 using System.Diagnostics;
 using System.Net.Http.Headers;
 using AccessToken = Nexus.Permissions.Export.Base.AccessToken;
@@ -12,6 +13,7 @@ public class Program
     static AccessToken accessToken;
     static async Task Main(string[] args)
     {
+        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
         var oauth = Settings.LoadSettings().OAuth;
         var authenticator = new Authenticator(oauth);
         authenticator.RequestLogin();

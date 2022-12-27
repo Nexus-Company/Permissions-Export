@@ -1,6 +1,7 @@
 ﻿using Microsoft.Graph;
 using Nexus.Permissions.Export.Models;
 using OfficeOpenXml;
+using Directory = System.IO.Directory;
 
 namespace Nexus.Permissions.Export;
 
@@ -13,6 +14,9 @@ internal static class PermissionsExtensions
 
         if (string.IsNullOrEmpty(path))
             throw new ArgumentNullException(nameof(path));
+
+        if (!Directory.Exists(Path.GetDirectoryName(path)))
+           _ = Directory.CreateDirectory(Path.GetDirectoryName(path));
 
         // Cria um novo arquivo XLSX usando o EPPlus
         using var package = new ExcelPackage();
