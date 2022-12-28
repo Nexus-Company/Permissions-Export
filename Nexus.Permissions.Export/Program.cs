@@ -28,27 +28,34 @@ public class Program
 
         while (true)
         {
-            Console.Clear();
-            var helper = new GraphHelper(client);
-            var site = await helper.GetSiteAsync();
-            var list = await helper.GetListAsync(site);
-            var obj = await helper.GetPermissionsAsync(site, list);
-            string path = Path.Combine($@"Results\{DateTime.Now:dd-MM-yyyy HH-mm}.xlsx");
-
-            obj.SaveInXlsx(path, true);
-
-            Process.Start(new ProcessStartInfo()
+            try
             {
-                UseShellExecute = true,
-                FileName = path
-            });
+                Console.Clear();
+                var helper = new GraphHelper(client);
+                var site = await helper.GetSiteAsync();
+                var list = await helper.GetListAsync(site);
+                var obj = await helper.GetPermissionsAsync(site, list);
+                string path = Path.Combine($@"Results\{DateTime.Now:dd-MM-yyyy HH-mm}.xlsx");
 
-            Console.WriteLine("Aperte qualquer tecla para continuar...");
+                obj.SaveInXlsx(path, true);
 
-            ConsoleKeyInfo key = Console.ReadKey();
-            if (key.Modifiers == ConsoleModifiers.Control &&
-                (key.KeyChar == 'c' || key.KeyChar == 'C'))
-                break;
+                Process.Start(new ProcessStartInfo()
+                {
+                    UseShellExecute = true,
+                    FileName = path
+                });
+
+                Console.WriteLine("Aperte qualquer tecla para continuar...");
+
+                ConsoleKeyInfo key = Console.ReadKey();
+                if (key.Modifiers == ConsoleModifiers.Control &&
+                    (key.KeyChar == 'c' || key.KeyChar == 'C'))
+                    break;
+            }
+            catch (Exception)
+            {
+
+            }
         }
     }
 }

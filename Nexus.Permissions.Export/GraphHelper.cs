@@ -58,7 +58,7 @@ internal class GraphHelper
 
     public async Task<Library?> GetListAsync(Tuple<string, string> site)
     {
-        showSite(site.Item2);
+        ShowSite(site.Item2);
 
         Console.WriteLine(" 0 - Listar de todas Bibliotecas \n 1 - Listar de uma Biblioteca\n");
         Console.ForegroundColor = ConsoleColor.White;
@@ -77,15 +77,43 @@ internal class GraphHelper
     public async Task<LibraryPermission[]> GetPermissionsAsync(Tuple<string, string> site, Library? libary)
     {
         if (libary != null)
-            return await GetPermissionsByLibaryAsync(site.Item1, libary);
+            return await GetPermissionsByLibaryAsync(site, libary);
         else
-            return await GetPermissionsAsync(site.Item1);
+            return await GetPermissionsAsync(site);
     }
 
-    private async Task<LibraryPermission[]> GetPermissionsByLibaryAsync(string site, Library libary)
+    #region Auxiliares Graph
+    private async Task<LibraryPermission[]> GetPermissionsAsync(Tuple<string, string> site)
+    {
+        List<LibraryPermission> permissionsList = new();
+        List<Library> libariesList = new();
+        var libaries = await _userClient.Sites[site.Item1].Drives.Request().GetAsync();
+
+        libariesList.AddRange(libaries.Select(lib => Library.ToLibrary(lib)));
+
+        while (libaries.NextPageRequest != null)
+        {
+            libaries = await libaries.NextPageRequest.GetAsync();
+
+            libariesList.AddRange(libaries.Select(lib=> Library.ToLibrary(lib)));
+        }
+
+        for (int i = 0; i < libariesList.Count; i++)
+        {
+            Library libary = libariesList[i];
+            permissionsList.AddRange(await GetPermissionsByLibaryAsync(site, libary));
+
+            ShowSite(site.Item2);
+            ShowProgressBar("Obtendo Bibliotecas", 100 / libariesList.Count * (i + 1));
+        }
+
+        return permissionsList.ToArray();
+    }
+
+    private async Task<LibraryPermission[]> GetPermissionsByLibaryAsync(Tuple<string, string> site, Library libary)
     {
         List<Permission> permissionsList = new();
-        var permissions = await _userClient.Sites[site].Drive.Items[libary.Id].Permissions.Request().GetAsync();
+        var permissions = await _userClient.Sites[site.Item1].Drive.Items[libary.Id].Permissions.Request().GetAsync();
 
         permissionsList.AddRange(permissions.ToArray());
 
@@ -157,29 +185,13 @@ internal class GraphHelper
             }
 
             libraryPermissions[i] = new LibraryPermission(libary, to, permission.Roles, type, members.ToArray());
+
+            ShowSite(site.Item2);
+            ShowProgressBar("Obtendo Membros", 100 / permissionsList.Count * (i + 1));
         }
 
         return libraryPermissions;
     }
-    private async Task<LibraryPermission[]> GetPermissionsAsync(string site)
-    {
-        List<LibraryPermission> permissionsList = new();
-        var libaries = await _userClient.Sites[site].Drives.Request().GetAsync();
-
-        foreach (var libary in libaries)
-            permissionsList.AddRange(await GetPermissionsByLibaryAsync(site, Library.ToLibrary(libary)));
-
-        while (libaries.NextPageRequest != null)
-        {
-            libaries = await libaries.NextPageRequest.GetAsync();
-
-            foreach (var libary in libaries)
-                permissionsList.AddRange(await GetPermissionsByLibaryAsync(site, Library.ToLibrary(libary)));
-        }
-
-        return permissionsList.ToArray();
-    }
-
     private async Task<Library> GetListAsync(Tuple<string, string> site, ISiteDrivesCollectionRequest? nextPage = null)
     {
         ISiteDrivesCollectionPage drives;
@@ -189,7 +201,7 @@ internal class GraphHelper
         else
             drives = await nextPage.GetAsync();
 
-        showSite(site.Item2);
+        ShowSite(site.Item2);
 
         for (int i = 0; i < drives.Count; i++)
             Console.WriteLine($" {i} - {drives[i].Name}");
@@ -205,7 +217,6 @@ internal class GraphHelper
 
         return Library.ToLibrary(drives[item]);
     }
-
     private async Task<Tuple<string, string>> GetSiteAsync(string endpoint, ISiteSitesCollectionRequest? nextPage = null)
     {
         ISiteSitesCollectionPage drives;
@@ -251,10 +262,13 @@ internal class GraphHelper
 
         return id;
     }
+    #endregion
 
-    private static void showSite(string site)
+    #region Auxiliares Console
+    private static void ShowSite(string site)
     {
         Console.Clear();
+        Console.ForegroundColor = ConsoleColor.White;
         Console.Write($"Site Selecionado: ");
         Console.ForegroundColor = ConsoleColor.Green;
         Console.WriteLine($"{site} \n");
@@ -303,4 +317,23 @@ internal class GraphHelper
             Console.WriteLine($"O valor de entrada deve estar entre '{min}' e '{max}'.");
         }
     }
+    private static void ShowProgressBar(string text, int value)
+    {
+        Console.ForegroundColor = ConsoleColor.White;
+        int progress = value * 50 / 100;
+        Console.Write("\r{0}: ", text);
+        Console.ForegroundColor = ConsoleColor.DarkGray;
+        Console.Write("[");
+        for (int j = 0; j < progress; j++)
+        {
+            Console.Write("=");
+        }
+        for (int j = progress; j < 50; j++)
+        {
+            Console.Write(" ");
+        }
+        Console.WriteLine("] {0}%\n", value);
+        Console.ForegroundColor = ConsoleColor.White;
+    }
+    #endregion
 }
