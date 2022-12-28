@@ -10,6 +10,6 @@ public class Member
     {
         DisplayName = displayName ?? throw new ArgumentNullException(nameof(displayName));
         Id = id ?? throw new ArgumentNullException(nameof(id));
-        Email = email ?? throw new ArgumentNullException(nameof(email));
+        Email = email;
     }
 }

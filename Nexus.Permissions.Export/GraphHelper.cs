@@ -1,8 +1,5 @@
 ﻿using Microsoft.Graph;
 using Nexus.Permissions.Export.Models;
-using System.Linq;
-using System.Threading.Tasks;
-using System.Web;
 using PermissionType = Nexus.Permissions.Export.Models.Enums.PermissionType;
 
 namespace Nexus.Permissions.Export;
@@ -11,6 +8,9 @@ internal class GraphHelper
 {
     private const string sharepointHost = ".sharepoint.com";
     private readonly GraphServiceClient _userClient;
+    private readonly List<User> users = new();
+    private readonly List<Group> groups = new();
+    private readonly List<SharePointIdentity> spGroup = new();
     public GraphHelper(GraphServiceClient client)
     {
         _userClient = client;
@@ -35,16 +35,20 @@ internal class GraphHelper
             UriBuilder builder = new(endpoint);
 
             if (string.IsNullOrEmpty(builder.Path))
-                endpoint = builder.Host.Trim();
+                endpoint = builder.Host.Trim() + sharepointHost;
 
             validEntry = true;
         }
 
         Console.ForegroundColor = ConsoleColor.White;
-        string id = await GetSiteIdByUrlAsync(new Uri(endpoint));
 
-        if (!string.IsNullOrEmpty(id))
-            return (id, endpoint).ToTuple();
+        if (new UriBuilder(endpoint).Host != endpoint)
+        {
+            string id = await GetSiteIdByUrlAsync(new Uri(endpoint));
+
+            if (!string.IsNullOrEmpty(id))
+                return (id, endpoint).ToTuple();
+        }
 
         endpoint ??= string.Empty;
         endpoint = endpoint.Contains(sharepointHost) ? endpoint : endpoint + sharepointHost;
@@ -52,7 +56,7 @@ internal class GraphHelper
         return await GetSiteAsync(endpoint);
     }
 
-    public async Task<string?> GetListAsync(Tuple<string, string> site)
+    public async Task<Library?> GetListAsync(Tuple<string, string> site)
     {
         showSite(site.Item2);
 
@@ -70,7 +74,7 @@ internal class GraphHelper
         return null;
     }
 
-    public async Task<LibraryPermission[]> GetPermissionsAsync(Tuple<string, string> site, string? libary)
+    public async Task<LibraryPermission[]> GetPermissionsAsync(Tuple<string, string> site, Library? libary)
     {
         if (libary != null)
             return await GetPermissionsByLibaryAsync(site.Item1, libary);
@@ -78,10 +82,10 @@ internal class GraphHelper
             return await GetPermissionsAsync(site.Item1);
     }
 
-    private async Task<LibraryPermission[]> GetPermissionsByLibaryAsync(string site, string libary)
+    private async Task<LibraryPermission[]> GetPermissionsByLibaryAsync(string site, Library libary)
     {
         List<Permission> permissionsList = new();
-        var permissions = await _userClient.Sites[site].Drive.Items[libary].Permissions.Request().GetAsync();
+        var permissions = await _userClient.Sites[site].Drive.Items[libary.Id].Permissions.Request().GetAsync();
 
         permissionsList.AddRange(permissions.ToArray());
 
@@ -91,9 +95,6 @@ internal class GraphHelper
             permissionsList.AddRange(permissions.ToArray());
         }
 
-        List<User> users = new();
-        List<Group> groups = new();
-        List<SharePointIdentity> spGroup = new();
         LibraryPermission[] libraryPermissions = new LibraryPermission[permissionsList.Count];
 
         for (int i = 0; i < permissionsList.Count; i++)
@@ -165,21 +166,23 @@ internal class GraphHelper
         List<LibraryPermission> permissionsList = new();
         var libaries = await _userClient.Sites[site].Drives.Request().GetAsync();
 
+
+
         foreach (var libary in libaries)
-            permissionsList.AddRange(await GetPermissionsByLibaryAsync(site, libary.Id));
+            permissionsList.AddRange(await GetPermissionsByLibaryAsync(site, Library.ToLibrary(libary)));
 
         while (libaries.NextPageRequest != null)
         {
             libaries = await libaries.NextPageRequest.GetAsync();
 
             foreach (var libary in libaries)
-                permissionsList.AddRange(await GetPermissionsByLibaryAsync(site, libary.Id));
+                permissionsList.AddRange(await GetPermissionsByLibaryAsync(site, Library.ToLibrary(libary)));
         }
 
         return permissionsList.ToArray();
     }
 
-    private async Task<string> GetListAsync(Tuple<string, string> site, ISiteDrivesCollectionRequest? nextPage = null)
+    private async Task<Library> GetListAsync(Tuple<string, string> site, ISiteDrivesCollectionRequest? nextPage = null)
     {
         ISiteDrivesCollectionPage drives;
 
@@ -202,7 +205,7 @@ internal class GraphHelper
         if (next ?? false)
             return await GetListAsync(site, nextPage);
 
-        return drives[item].Id;
+        return Library.ToLibrary(drives[item]);
     }
 
     private async Task<Tuple<string, string>> GetSiteAsync(string endpoint, ISiteSitesCollectionRequest? nextPage = null)

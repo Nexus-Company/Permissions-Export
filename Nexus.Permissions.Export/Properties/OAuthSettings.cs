@@ -1,6 +1,4 @@
 ﻿using Microsoft.Extensions.Configuration;
-using Newtonsoft.Json.Linq;
-using System.Diagnostics;
 
 namespace Nexus.Permissions.Export.Properties;
 public class Settings
