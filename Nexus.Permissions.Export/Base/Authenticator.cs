@@ -7,7 +7,6 @@ using System.Web;
 using Process = System.Diagnostics.Process;
 
 namespace Nexus.Permissions.Export.Base;
-
 internal class Authenticator : IDisposable
 {
     private OAuthSettings _settings;

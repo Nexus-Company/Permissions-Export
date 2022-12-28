@@ -166,8 +166,6 @@ internal class GraphHelper
         List<LibraryPermission> permissionsList = new();
         var libaries = await _userClient.Sites[site].Drives.Request().GetAsync();
 
-
-
         foreach (var libary in libaries)
             permissionsList.AddRange(await GetPermissionsByLibaryAsync(site, Library.ToLibrary(libary)));
 
@@ -283,7 +281,7 @@ internal class GraphHelper
 
         while (true)
         {
-            string entry = Console.ReadLine()?.ToLowerInvariant().Trim();
+            string entry = Console.ReadLine()?.ToLowerInvariant().Trim() ?? string.Empty;
 
             if (string.IsNullOrEmpty(entry)) continue;
             if (entry == "n")

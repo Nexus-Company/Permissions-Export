@@ -11,12 +11,13 @@ namespace Nexus.Permissions.Export;
 public class Program
 {
     static AccessToken accessToken;
-    static async Task Main(string[] args)
+    public static async Task Main(string[] args)
     {
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
         var oauth = Settings.LoadSettings().OAuth;
         var authenticator = new Authenticator(oauth);
         authenticator.RequestLogin();
+        Console.WriteLine("Esperando retorno da autenticação...");
         accessToken = await authenticator.AwaitLoginAsync();
 
         var client = new GraphServiceClient(new DelegateAuthenticationProvider(async (requestMessage) =>
@@ -27,6 +28,7 @@ public class Program
 
         while (true)
         {
+            Console.Clear();
             var helper = new GraphHelper(client);
             var site = await helper.GetSiteAsync();
             var list = await helper.GetListAsync(site);
@@ -41,9 +43,11 @@ public class Program
                 FileName = path
             });
 
-            path = Console.ReadLine() ?? string.Empty;
+            Console.WriteLine("Aperte qualquer tecla para continuar...");
 
-            if (path == "exit")
+            ConsoleKeyInfo key = Console.ReadKey();
+            if (key.Modifiers == ConsoleModifiers.Control &&
+                (key.KeyChar == 'c' || key.KeyChar == 'C'))
                 break;
         }
     }
