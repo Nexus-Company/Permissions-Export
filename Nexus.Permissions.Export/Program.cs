@@ -32,10 +32,11 @@ public class Program
             {
                 Console.Clear();
                 var helper = new GraphHelper(client);
-                var site = await helper.GetSiteAsync();
+                (string siteId, string siteUrl, string siteName) = await helper.GetSiteAsync();
+                Tuple<string, string> site = (siteId, siteUrl).ToTuple();
                 var list = await helper.GetListAsync(site);
                 var obj = await helper.GetPermissionsAsync(site, list);
-                string path = Path.Combine($@"Results\{DateTime.Now:dd-MM-yyyy HH-mm}.xlsx");
+                string path = Path.Combine($@"Results\{DateTime.Now:dd-MM-yyyy HH-mm-ss} ({siteName}).xlsx");
 
                 obj.SaveInXlsx(path, true);
 

@@ -17,10 +17,11 @@ internal class GraphHelper
     }
 
     #region Membros Publicos
-    public async Task<Tuple<string, string>> GetSiteAsync()
+    public async Task<Tuple<string, string, string>> GetSiteAsync()
     {
         bool validEntry = false;
         string? endpoint = null;
+        string name = null;
 
         while (!validEntry)
         {
@@ -45,10 +46,10 @@ internal class GraphHelper
 
         if (new UriBuilder(endpoint).Host != endpoint)
         {
-            string id = await GetSiteIdByUrlAsync(new Uri(endpoint));
+            (string id, name) = await GetSiteIdByUrlAsync(new Uri(endpoint));
 
             if (!string.IsNullOrEmpty(id))
-                return (id, endpoint).ToTuple();
+                return (id, endpoint, name).ToTuple();
         }
 
         endpoint ??= string.Empty;
@@ -217,7 +218,7 @@ internal class GraphHelper
 
         return Library.ToLibrary(drives[item]);
     }
-    private async Task<Tuple<string, string>> GetSiteAsync(string endpoint, ISiteSitesCollectionRequest? nextPage = null)
+    private async Task<Tuple<string, string, string>> GetSiteAsync(string endpoint, ISiteSitesCollectionRequest? nextPage = null)
     {
         ISiteSitesCollectionPage drives;
         Console.WriteLine();
@@ -243,24 +244,29 @@ internal class GraphHelper
         if (next ?? false)
             return await GetSiteAsync(endpoint, nextPage);
 
-        return (drives[item].Id, drives[item].WebUrl).ToTuple();
+        return (drives[item].Id, drives[item].WebUrl, drives[item].Name).ToTuple();
     }
-    private async Task<string> GetSiteIdByUrlAsync(Uri url)
+    private async Task<Tuple<string, string>> GetSiteIdByUrlAsync(Uri url)
     {
-        string id = string.Empty;
+        string
+            id = string.Empty,
+            name = string.Empty;
 
         try
         {
-            id = (await _userClient.Sites
+            var site = await _userClient.Sites
                 .GetByPath(url.LocalPath, url.Host)
                 .Request()
-                .GetAsync()).Id;
+                .GetAsync();
+
+            id = site.Id;
+            name = site.Name;
         }
         catch (Exception)
         {
         }
 
-        return id;
+        return (id, name).ToTuple();
     }
 
     private async Task<Member[]> MembersRequestToMembers(IGroupMembersCollectionWithReferencesPage membersRequest)
