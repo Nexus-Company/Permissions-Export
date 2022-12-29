@@ -114,7 +114,7 @@ internal class GraphHelper
     private async Task<LibraryPermission[]> GetPermissionsByLibaryAsync(Tuple<string, string> site, Library libary)
     {
         List<Permission> permissionsList = new();
-        var permissions = await _userClient.Sites[site.Item1].Drive.Items[libary.Id].Permissions.Request().GetAsync();
+        var permissions = await _userClient.Sites[site.Item1].Drives[libary.Id].Root.Permissions.Request().GetAsync();
         permissionsList.AddRange(permissions.ToArray());
 
         while (permissions.NextPageRequest != null)
@@ -162,17 +162,21 @@ internal class GraphHelper
             {
                 type = PermissionType.User;
                 Identity id = permission.GrantedToV2.User;
-                to = permission.GrantedToV2.User.DisplayName;
+                string mail = id.AdditionalData["email"]?.ToString() ?? string.Empty;
+                to = id.DisplayName;
 
-                User? user = users.FirstOrDefault(fs => fs.Id == permission.GrantedToV2.User.Id);
-
-                if (user == null)
+                if (!string.IsNullOrEmpty(id.Id))
                 {
-                    user = await _userClient.Users[id.Id].Request().GetAsync();
-                    users.Add(user);
+                    User? user = users.FirstOrDefault(fs => fs.Id == permission.GrantedToV2.User.Id);
+
+                    if (user == null)
+                    {
+                        user = await _userClient.Users[id.Id].Request().GetAsync();
+                        users.Add(user);
+                    }
                 }
 
-                members.Add(new Member(user.DisplayName, user.Id, user.Mail));
+                members.Add(new Member(id.DisplayName, id.Id, mail));
             }
             else if (permission.GrantedToV2.SiteUser != null)
             {

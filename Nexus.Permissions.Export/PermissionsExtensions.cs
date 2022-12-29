@@ -1,4 +1,5 @@
 ﻿using Nexus.Permissions.Export.Models;
+using Nexus.Permissions.Export.Models.Enums;
 using OfficeOpenXml;
 using System.Drawing;
 using Directory = System.IO.Directory;
@@ -26,8 +27,9 @@ internal static class PermissionsExtensions
         worksheet.Cells[1, 1].Value = "Biblioteca";
         worksheet.Cells[1, 2].Value = "Permisão para";
         worksheet.Cells[1, 3].Value = "Tipo";
-        worksheet.Cells[1, 4].Value = "Membro";
-        worksheet.Cells[1, 5].Value = "Acesso";
+        worksheet.Cells[1, 4].Value = "Nome Membro";
+        worksheet.Cells[1, 5].Value = "E-mail Membro";
+        worksheet.Cells[1, 6].Value = "Acesso";
         var namedStyle = worksheet.Workbook.Styles.CreateNamedStyle("HyperLink");
         namedStyle.Style.Font.UnderLine = true;
         namedStyle.Style.Font.Color.SetColor(Color.Blue);
@@ -39,32 +41,38 @@ internal static class PermissionsExtensions
         {
             var permission = permissions.ElementAt(i - 1);
             int rowIndex = i + aditional;
-            worksheet.Cells[rowIndex, 1].DefineByLibary(permission.Library);
-            worksheet.Cells[rowIndex, 2].Value = permission.To;
-            worksheet.Cells[rowIndex, 3].Value = permission.Type.ToString();
-
             // Adiciona as funções como uma lista separada por vírgulas
             var roles = string.Join(", ", permission.Roles.Select(r => r.ToString()));
-            worksheet.Cells[rowIndex, 5].Value = roles;
 
-            for (int x = 0; x < permission.Members.Length; x++)
+            if (permission.Type!= PermissionType.User)
             {
-                aditional += 1;
-                rowIndex = i + aditional;
-                var member = permission.Members[x];
                 worksheet.Cells[rowIndex, 1].DefineByLibary(permission.Library);
                 worksheet.Cells[rowIndex, 2].Value = permission.To;
                 worksheet.Cells[rowIndex, 3].Value = permission.Type.ToString();
-                worksheet.Cells[rowIndex, 4].Value = member.Email;
+                worksheet.Cells[rowIndex, 6].Value = roles;
+            }
+            else
+            {
+                aditional--;
+            }
 
-                // Adiciona as funções como uma lista separada por vírgulas
-                roles = string.Join(", ", permission.Roles.Select(r => r.ToString()));
-                worksheet.Cells[rowIndex, 5].Value = roles;
+            for (int x = 0; x < permission.Members.Length; x++)
+            {
+                aditional++;
+                rowIndex = i + aditional;
+                var member = permission.Members[x];
+
+                worksheet.Cells[rowIndex, 1].DefineByLibary(permission.Library);
+                worksheet.Cells[rowIndex, 2].Value = permission.To;
+                worksheet.Cells[rowIndex, 3].Value = permission.Type.ToString();
+                worksheet.Cells[rowIndex, 4].Value = member.DisplayName;
+                worksheet.Cells[rowIndex, 5].Value = member.Email;
+                worksheet.Cells[rowIndex, 6].Value = roles;
             }
         }
 
         // Adiciona a tabela
-        worksheet.Tables.Add(new ExcelAddressBase(1, 1, permissions.Count() + aditional, 5), "Permissões");
+        worksheet.Tables.Add(new ExcelAddressBase(1, 1, permissions.Count() + aditional, 6), "Permissões");
 
         // Salva o arquivo XLSX no caminho especificado
         try

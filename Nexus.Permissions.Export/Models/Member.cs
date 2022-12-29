@@ -9,7 +9,7 @@ public class Member
     public Member(string displayName, string id, string email)
     {
         DisplayName = displayName ?? throw new ArgumentNullException(nameof(displayName));
-        Id = id ?? throw new ArgumentNullException(nameof(id));
+        Id = id;
         Email = email;
     }
 }
