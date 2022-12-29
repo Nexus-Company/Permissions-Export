@@ -12,6 +12,8 @@
 		<Description>Exportador de Permissões de Bibliotecas no Sharepoint</Description>
 		<Copyright>© 2022 Nexus Company, todos os direitos reservados.</Copyright>
 		<PackageProjectUrl>https://github.com/Nexus-Company/Permissions-Export</PackageProjectUrl>
+		<Version>0.1.1</Version>
+		<AssemblyVersion>0.1.1</AssemblyVersion>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">

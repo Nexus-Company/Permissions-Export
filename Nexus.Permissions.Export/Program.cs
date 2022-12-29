@@ -52,7 +52,7 @@ public class Program
                     (key.KeyChar == 'c' || key.KeyChar == 'C'))
                     break;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
 
             }

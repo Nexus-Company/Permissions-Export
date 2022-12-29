@@ -16,6 +16,7 @@ internal class GraphHelper
         _userClient = client;
     }
 
+    #region Membros Publicos
     public async Task<Tuple<string, string>> GetSiteAsync()
     {
         bool validEntry = false;
@@ -81,6 +82,7 @@ internal class GraphHelper
         else
             return await GetPermissionsAsync(site);
     }
+    #endregion
 
     #region Auxiliares Graph
     private async Task<LibraryPermission[]> GetPermissionsAsync(Tuple<string, string> site)
@@ -95,7 +97,7 @@ internal class GraphHelper
         {
             libaries = await libaries.NextPageRequest.GetAsync();
 
-            libariesList.AddRange(libaries.Select(lib=> Library.ToLibrary(lib)));
+            libariesList.AddRange(libaries.Select(lib => Library.ToLibrary(lib)));
         }
 
         for (int i = 0; i < libariesList.Count; i++)
@@ -109,12 +111,10 @@ internal class GraphHelper
 
         return permissionsList.ToArray();
     }
-
     private async Task<LibraryPermission[]> GetPermissionsByLibaryAsync(Tuple<string, string> site, Library libary)
     {
         List<Permission> permissionsList = new();
         var permissions = await _userClient.Sites[site.Item1].Drive.Items[libary.Id].Permissions.Request().GetAsync();
-
         permissionsList.AddRange(permissions.ToArray());
 
         while (permissions.NextPageRequest != null)
@@ -147,24 +147,15 @@ internal class GraphHelper
                 if (groups.FirstOrDefault(gp => gp.Id == group.Id) == null)
                     groups.Add(group);
 
-                var membersList = await _userClient.Groups[permission.GrantedToV2.Group.Id].Members.Request().GetAsync();
+                var membersRequest = await _userClient.Groups[permission.GrantedToV2.Group.Id].Members.Request().GetAsync();
 
-                while (membersList.NextPageRequest != null)
+                members.AddRange(await MembersRequestToMembers(membersRequest));
+
+                while (membersRequest.NextPageRequest != null)
                 {
-                    membersList = await membersList.NextPageRequest.GetAsync();
+                    membersRequest = await membersRequest.NextPageRequest.GetAsync();
 
-                    foreach (var item in membersList)
-                    {
-                        User? user = users.FirstOrDefault(fs => fs.Id == item.Id);
-
-                        if (user == null)
-                        {
-                            user = await _userClient.Users[item.Id].Request().GetAsync();
-                            users.Add(user);
-                        }
-
-                        members.Add(new Member(user.DisplayName, user.Id, user.Mail));
-                    }
+                    members.AddRange(await MembersRequestToMembers(membersRequest));
                 }
             }
             else if (permission.GrantedToV2.User != null)
@@ -182,6 +173,11 @@ internal class GraphHelper
                 }
 
                 members.Add(new Member(user.DisplayName, user.Id, user.Mail));
+            }
+            else if (permission.GrantedToV2.SiteUser != null)
+            {
+                type = PermissionType.Sharepoint;
+                to = permission.GrantedToV2.SiteUser.DisplayName;
             }
 
             libraryPermissions[i] = new LibraryPermission(libary, to, permission.Roles, type, members.ToArray());
@@ -261,6 +257,27 @@ internal class GraphHelper
         }
 
         return id;
+    }
+
+    private async Task<Member[]> MembersRequestToMembers(IGroupMembersCollectionWithReferencesPage membersRequest)
+    {
+        Member[] members = new Member[membersRequest.Count];
+
+        for (int i = 0; i < membersRequest.Count; i++)
+        {
+            var member = membersRequest[i];
+            User? user = users.FirstOrDefault(fs => fs.Id == member.Id);
+
+            if (user == null)
+            {
+                user = await _userClient.Users[member.Id].Request().GetAsync();
+                users.Add(user);
+            }
+
+            members[i] = new Member(user.DisplayName, user.Id, user.Mail);
+        }
+
+        return members;
     }
     #endregion
 

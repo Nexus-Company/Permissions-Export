@@ -1,5 +1,4 @@
-﻿using Microsoft.Graph;
-using Nexus.Permissions.Export.Models;
+﻿using Nexus.Permissions.Export.Models;
 using OfficeOpenXml;
 using System.Drawing;
 using Directory = System.IO.Directory;
@@ -34,11 +33,11 @@ internal static class PermissionsExtensions
         namedStyle.Style.Font.Color.SetColor(Color.Blue);
 
         permissions = permissions.OrderBy(perm => perm.Library.DisplayName);
-        int aditional = 2;
+        int aditional = 1;
 
-        for (int i = 0; i < permissions.Count(); i++)
+        for (int i = 1; i <= permissions.Count(); i++)
         {
-            var permission = permissions.ElementAt(i);
+            var permission = permissions.ElementAt(i - 1);
             int rowIndex = i + aditional;
             worksheet.Cells[rowIndex, 1].DefineByLibary(permission.Library);
             worksheet.Cells[rowIndex, 2].Value = permission.To;
@@ -50,7 +49,9 @@ internal static class PermissionsExtensions
 
             for (int x = 0; x < permission.Members.Length; x++)
             {
-                var member = permission.Members[i];
+                aditional += 1;
+                rowIndex = i + aditional;
+                var member = permission.Members[x];
                 worksheet.Cells[rowIndex, 1].DefineByLibary(permission.Library);
                 worksheet.Cells[rowIndex, 2].Value = permission.To;
                 worksheet.Cells[rowIndex, 3].Value = permission.Type.ToString();
@@ -59,13 +60,11 @@ internal static class PermissionsExtensions
                 // Adiciona as funções como uma lista separada por vírgulas
                 roles = string.Join(", ", permission.Roles.Select(r => r.ToString()));
                 worksheet.Cells[rowIndex, 5].Value = roles;
-
-                aditional += 1;
             }
         }
 
         // Adiciona a tabela
-        worksheet.Tables.Add(new ExcelAddressBase(1, 1, permissions.Count() + 1, 5), "Permissões");
+        worksheet.Tables.Add(new ExcelAddressBase(1, 1, permissions.Count() + aditional, 5), "Permissões");
 
         // Salva o arquivo XLSX no caminho especificado
         try
@@ -84,7 +83,7 @@ internal static class PermissionsExtensions
         }
     }
 
-    private static void DefineByLibary(this ExcelRange libaryCell, Library library) 
+    private static void DefineByLibary(this ExcelRange libaryCell, Library library)
     {
         libaryCell.Value = library.DisplayName;
         libaryCell.Hyperlink = new Uri(library.Url);

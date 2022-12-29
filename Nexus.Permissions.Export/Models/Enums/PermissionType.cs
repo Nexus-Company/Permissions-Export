@@ -5,5 +5,6 @@ public enum PermissionType
     User,
     Domain,
     Sharepoint,
-    Security
+    Security,
+    SiteUser
 }
